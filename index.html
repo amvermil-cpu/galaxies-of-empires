@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Galaxies of Empires</title>
+<meta name="theme-color" content="#050816">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Galaxies">
+<meta name="description" content="Galaxies of Empires — a single-player space strategy game of planets, fleets, trade and sieges.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="map"></canvas>
+
+<header id="topbar">
+  <div class="resrow">
+    <div class="res" id="r-metal" style="--c:#d9a066" title="Metal"><span>⛏</span><b>0</b><small></small></div>
+    <div class="res" id="r-crystal" style="--c:#7fe3ff" title="Crystal"><span>💎</span><b>0</b><small></small></div>
+    <div class="res" id="r-rp" style="--c:#d59bff" title="Research points"><span>⚗</span><b>0</b><small></small></div>
+    <button class="res idlechip" id="r-idle" style="--c:#ffb454" title="Idle construction slots: planets with nothing being built — tap to jump there" data-a="idleJump"><span>⏸</span><b>0</b><small>idle</small></button>
+    <button class="res cmd" id="r-cmd" style="--c:#ffd84d" title="Commander level · system cap" data-a="open" data-t="commander"><span>★</span><b>Lv 1</b><small>🪐 1/10</small><i class="xpbar"><i></i></i></button>
+  </div>
+  <div class="armyrow" id="armyrow">
+    <div class="army" id="a-troops" style="--c:#9be37a" title="Total troops: garrisons plus troops aboard your transports"><span>🪖</span><b>0</b><small>troops</small></div>
+    <div class="army" id="a-fighters" style="--c:#7fe3ff" title="Total Fighters in your fleets"><span>✈</span><b>0</b><small>fighters</small></div>
+    <div class="army" id="a-destroyers" style="--c:#ffb454" title="Total Destroyers in your fleets"><span>⛴</span><b>0</b><small>destroy.</small></div>
+    <div class="army" id="a-carriers" style="--c:#ff7ad9" title="Total Warship Carriers in your fleets"><span>🛡</span><b>0</b><small>carriers</small></div>
+    <div class="army" id="a-transports" style="--c:#c9d6e8" title="Total Transports in your fleets"><span>🚚</span><b>0</b><small>transp.</small></div>
+    <div class="army" id="a-freighters" style="--c:#ffd35a" title="Total Freighters in your fleets"><span>🚢</span><b>0</b><small>freight.</small></div>
+  </div>
+  <div id="riftbar" class="hidden" data-a="open" data-t="incoming" title="Rift: countdown to the next Hollow wave and its estimated size"></div>
+  <div class="ctlrow">
+    <span id="clock">0:00</span><span id="status" class="status"></span><span id="share" class="status"></span>
+    <span class="spacer"></span>
+    <button class="b hb hidden" id="battleBtn" data-a="battle" title="Watch battle">⚔</button>
+    <button class="b hb" id="pauseBtn" data-a="pause" title="Pause (Space)">❚❚</button>
+    <button class="b hb" data-a="speed" data-v="1" title="1× (key 1)">1×</button>
+    <button class="b hb" data-a="speed" data-v="2" title="2× (key 2)">2×</button>
+    <button class="b hb" data-a="speed" data-v="4" title="4× (key 3)">4×</button>
+    <button class="b hb" id="muteBtn" data-a="mute" title="Sound">🔊</button>
+  </div>
+</header>
+<div id="alertStrip" class="alertstack hidden"></div>
+
+<div id="tut" class="hidden"></div>
+<div id="banner" class="hidden"></div>
+<div id="stageBanner" class="hidden"></div>
+<div id="toasts"></div>
+<div id="bcards"></div>
+<div id="capBanner" class="hidden"></div>
+
+<section id="sheet" class="hidden">
+  <div class="sheet-head"><div id="sheet-title"></div><button class="b x" data-a="close" aria-label="Close">✕</button></div>
+  <div id="pview" class="hidden"><canvas id="pvcanvas" width="120" height="104"></canvas><div id="pvqueue" aria-label="Build queue"></div><div id="pvcap"></div></div>
+  <div id="sheet-body"></div>
+</section>
+
+<nav id="bottombar">
+  <button data-a="open" data-t="empire"><span>🪐</span>Empire</button>
+  <button data-a="open" data-t="fleets"><span>🚀</span>Fleets</button>
+  <button data-a="open" data-t="incoming" id="navAlerts"><span>📡</span>Alerts</button>
+  <button data-a="open" data-t="research"><span>⚗</span>Research</button>
+  <button data-a="open" data-t="trade"><span>⚖</span>Trade</button>
+  <button data-a="open" data-t="log"><span>📜</span>Log</button>
+  <button data-a="open" data-t="menu" id="navMenu" aria-label="Menu"><span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>Menu</button>
+</nav>
+
+<div id="battleView" class="hidden">
+  <canvas id="bcanvas"></canvas>
+  <div id="bhud">
+    <div class="bh-top"><b id="btitle"></b><button class="b" id="bClose">✕ Map</button></div>
+    <div id="bpow"></div>
+    <div id="bstatus" class="small"></div>
+  </div>
+  <div id="bctl">
+    <button class="b warn" id="bPull">⛑ Pull out damaged</button>
+    <button class="b" id="bWithdrawSel" disabled>Withdraw selected (0)</button>
+    <button class="b" id="bRetreat">↩ Retreat all</button>
+    <div class="small muted">Live status only — the replay is on the result card.</div>
+  </div>
+</div>
+
+<div id="ground" class="hidden"></div>
+<div id="result" class="hidden"></div>
+<div id="modal" class="hidden"></div>
+<div id="transit" class="hidden"></div>
+<div id="menu" class="hidden"></div>
+<div id="replay" class="hidden">
+  <canvas id="rcanvas"></canvas>
+  <div id="rload"><div class="rl-t">Building battle animation simulation…</div><div class="rl-bar"><i></i></div><div class="rl-s small"></div></div>
+  <div id="rhud" class="hidden"><div class="rh-top"><b id="rtitle"></b><button class="b" id="rClose">✕ Close</button></div><div id="rcount" class="small"></div></div>
+  <div id="rctl" class="hidden"><button class="b" id="rPlay">❚❚</button><button class="b" id="rSpeed">1×</button><input type="range" id="rSeek" min="0" max="1000" value="0"><span id="rTime" class="small"></span></div>
+</div>
+<button id="photoExit" class="hidden" aria-label="Exit photo mode">✕ Photo mode</button>
+
+<script src="js/data.js?v=3.1"></script>
+<script src="js/state.js?v=3.1"></script>
+<script src="js/sim.js?v=3.1"></script>
+<script src="js/v14.js?v=3.1"></script>
+<script src="js/v15.js?v=3.1"></script>
+<script src="js/v20.js?v=3.1"></script>
+<script src="js/v21.js?v=3.1"></script>
+<script src="js/v22.js?v=3.1"></script>
+<script src="js/v23.js?v=3.1"></script>
+<script src="js/v24.js?v=3.1"></script>
+<script src="js/v25.js?v=3.1"></script>
+<script src="js/v26.js?v=3.1"></script>
+<script src="js/v27.js?v=3.1"></script>
+<script src="js/v28.js?v=3.1"></script>
+<script src="js/v29.js?v=3.1"></script>
+<script src="js/v30.js?v=3.1"></script>
+<script src="js/v31.js?v=3.1"></script>
+<script src="js/render.js?v=3.1"></script>
+<script src="js/gfx.js?v=3.1"></script>
+<script src="js/audio.js?v=3.1"></script>
+<script src="js/ui.js?v=3.1"></script>
+<script src="js/main.js?v=3.1"></script>
+</body>
+</html>
